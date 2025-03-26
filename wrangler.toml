@@ -6,6 +6,9 @@ compatibility_date = "2023-12-01"
 TRADE_WORKER_URL = "https://trade-worker.your-subdomain.workers.dev"
 TELEGRAM_WORKER_URL = "https://telegram-worker.your-subdomain.workers.dev"
 
+[observability]
+enabled = true
+
 # Secrets to be added with wrangler:
 # wrangler secret put API_SECRET_KEY
 # wrangler secret put INTERNAL_SERVICE_KEY
