@@ -16,14 +16,18 @@ async function handleRequest(request, env) {
       const data = await request.json();
 
       // Extract authentication from the payload itself
-      const { apiKey, signal, exchange, action, symbol, quantity, price, leverage, notify } = data;
+      const { apiKey, exchange, action, symbol, quantity, price, leverage, notify } = data;
 
       // Validate the API key with a secure comparison
       const isValid = await validateApiKey(apiKey, env);
 
       if (!isValid) {
         // Don't reveal the reason for security
-        return new Response(JSON.stringify({ success: false }), { status: 403 });
+        return new Response(JSON.stringify({
+          success: false,
+          worker: 'webhook-receiver',
+          error: 'Authentication failed'
+        }), { status: 403 });
       }
 
       // Remove the API key from the data before forwarding
@@ -34,9 +38,10 @@ async function handleRequest(request, env) {
 
       // Process trading signal if present
       let tradeResult = null;
+      let tradeWorkerInfo = null;
       if (exchange && action && symbol && quantity) {
         // Forward to trade worker
-        tradeResult = await processTrade({
+        const tradeResponse = await processTrade({
           requestId,
           exchange,
           action,
@@ -45,38 +50,79 @@ async function handleRequest(request, env) {
           price,
           leverage
         }, env);
+        tradeResult = tradeResponse.result;
+        tradeWorkerInfo = {
+          success: tradeResponse.success,
+          error: tradeResponse.error,
+          worker: 'trade-worker'
+        };
       }
 
       // Process notification if requested
       let notificationResult = null;
+      let notificationWorkerInfo = null;
       if (notify) {
-        notificationResult = await processNotification({
+        const notificationResponse = await processNotification({
           requestId,
           message: notify.message || createDefaultMessage(data),
           chatId: notify.chatId
         }, env);
+        notificationResult = notificationResponse.result;
+        notificationWorkerInfo = {
+          success: notificationResponse.success,
+          error: notificationResponse.error,
+          worker: 'notification-worker'
+        };
       }
 
-      // Return success response
+      // Return success response with worker information
       return new Response(JSON.stringify({
         success: true,
+        worker: 'webhook-receiver',
         requestId,
-        tradeResult,
-        notificationResult
-      }), { status: 200 });
+        trade: tradeWorkerInfo ? {
+          ...tradeWorkerInfo,
+          result: tradeResult
+        } : null,
+        notification: notificationWorkerInfo ? {
+          ...notificationWorkerInfo,
+          result: notificationResult
+        } : null
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
     } catch (error) {
       console.error('Error processing webhook:', error);
 
-      // Generic error response (don't expose details)
+      // Generic error response with worker info
       return new Response(JSON.stringify({
-        success: false
-      }), { status: 500 });
+        success: false,
+        worker: 'webhook-receiver',
+        error: 'Internal server error'
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
   }
 
   // Default response for other methods
-  return new Response('Method not allowed', { status: 405 });
+  return new Response(JSON.stringify({
+    success: false,
+    worker: 'webhook-receiver',
+    error: 'Method not allowed'
+  }), {
+    status: 405,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
 }
 
 // Secure API key validation using a fixed-time comparison
