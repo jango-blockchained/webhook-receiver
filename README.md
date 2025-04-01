@@ -2,7 +2,7 @@
 
 A Cloudflare Worker service that acts as the entry point for TradingView alerts and other trading signals. This worker validates incoming webhooks and forwards them to the appropriate worker services.
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/yourusername/grid-trading/tree/main/webhook-receiver)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/yourusername/hoox-trading/tree/main/webhook-receiver)
 
 ## Features
 
@@ -81,7 +81,7 @@ bun run deploy
   "price": 65000,
   "leverage": 20,
   "notify": {
-    "message": "⚠️ BTC Grid Signal: LONG at 65000",
+    "message": "⚠️ BTC Hoox Signal: LONG at 65000",
     "chatId": 123456789
   }
 }
